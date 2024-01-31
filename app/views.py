@@ -12,7 +12,7 @@ import asyncio
 from django.views.decorators.csrf import csrf_exempt
 from .models import *
 from .serializers import *
-
+from django.conf import settings
 
 from asgiref.sync import async_to_sync
 
@@ -56,68 +56,69 @@ def get_project_manager(request):
 
 @csrf_exempt
 @async_to_sync
+@api_view(['POST'])
 async def generate_ai_design(request):
-
-
-
     prompt = request.POST.get('prompt')
-    if request.method == 'POST':
-        try:
-            # Get the uploaded image file
-            file = request.FILES['image']
+    
+    try:
+        # Get the uploaded image file
+        file = request.FILES['image']
 
-            # API endpoint for the first request
-            first_api_url = 'https://stablediffusionapi.com/api/v5/interior'
+        # API endpoint for the first request
+        first_api_url = 'https://stablediffusionapi.com/api/v5/interior'
+        ai_design = AIDesign.objects.create(image=file)
+        ai_design.image_url = settings.HOST+ai_design.image.url
+        ai_design.save()
+        last_ai_design = AIDesign.objects.filter().last()
+        # Prepare data for the first API request
+        print("url::",last_ai_design.image_url)
+        first_api_data = {
+            "key":settings.API_KEY,
+            "init_image":last_ai_design.image_url,
+            "prompt": prompt,
+            "steps": 50,
+            "guidance_scale": 7
+        }
 
-            # Prepare data for the first API request
-            first_api_data = {
-                "key": "UfCS7oDLnLdILcjmAC5FXsC65LTYhzQ8pjlEDSUJMKcJudlZ6adka4bcOaq2",
-                "init_image": "https://www.shutterstock.com/image-photo/russia-moscow-september-10-2019-260nw-1638165715.jpg",
-                "prompt": prompt,
-                "steps": 50,
-                "guidance_scale": 7
-            }
+        # Make the first API request
+        first_api_response = requests.post(first_api_url, json=first_api_data)
 
-            # Make the first API request
-            first_api_response = requests.post(first_api_url, json=first_api_data)
+        # Check if the request was successful (status code 200)
+        if first_api_response.status_code == 200:
+            # Parse the response
+            first_api_response_data = first_api_response.json()
 
-            # Check if the request was successful (status code 200)
-            if first_api_response.status_code == 200:
-                # Parse the response
-                first_api_response_data = first_api_response.json()
+            # Get the request ID from the first API response
+            request_id = first_api_response_data.get('id')
 
-                # Get the request ID from the first API response
-                request_id = first_api_response_data.get('id')
+            # Delay the execution for 3-4 seconds
+            await asyncio.sleep(6)
+            print("eee:",first_api_response_data)
+            # API endpoint for the second request
+            second_api_url = f'https://stablediffusionapi.com/api/v3/fetch/{request_id}'
 
-                # Delay the execution for 3-4 seconds
-                await asyncio.sleep(10)
+            # Make the second API request
+            body ={
+                    "key":settings.API_KEY,
+                "request_id": "71149552"
+                }
 
-                # API endpoint for the second request
-                second_api_url = f'https://stablediffusionapi.com/api/v3/fetch/{request_id}'
+            second_api_response = requests.post(second_api_url,json=body)
 
-                # Make the second API request
-                body ={
-                        "key":"UfCS7oDLnLdILcjmAC5FXsC65LTYhzQ8pjlEDSUJMKcJudlZ6adka4bcOaq2",
-                    "request_id": "71149552"
-                    }
+            # Check if the second API request was successful
+            if second_api_response.status_code == 200:
+                # Parse and return the second API response
+                second_api_response_data = second_api_response.json()
+                return JsonResponse({"data": second_api_response_data})
 
-                second_api_response = requests.post(second_api_url,json=body)
+            # Return error response for the second API request
+            return JsonResponse({'error': f'Second API request failed with status code {second_api_response.status_code}'}, status=500)
 
-                # Check if the second API request was successful
-                if second_api_response.status_code == 200:
-                    # Parse and return the second API response
-                    second_api_response_data = second_api_response.json()
-                    return JsonResponse({"data": second_api_response_data})
+        # Return error response for the first API request
+        return JsonResponse({'error': f'First API request failed with status code {first_api_response.status_code}'}, status=500)
 
-                # Return error response for the second API request
-                return JsonResponse({'error': f'Second API request failed with status code {second_api_response.status_code}'}, status=500)
+    except KeyError:
+        # Return error response for missing 'image' in the request
+        return JsonResponse({'error': 'Missing image in the request'}, status=400)
 
-            # Return error response for the first API request
-            return JsonResponse({'error': f'First API request failed with status code {first_api_response.status_code}'}, status=500)
 
-        except KeyError:
-            # Return error response for missing 'image' in the request
-            return JsonResponse({'error': 'Missing image in the request'}, status=400)
-    else:
-        # Return error for unsupported HTTP methods
-        return JsonResponse({'error': 'Method not allowed'}, status=405)
