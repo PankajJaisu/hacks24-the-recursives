@@ -10,8 +10,8 @@ import requests
 import random 
 import asyncio
 from django.views.decorators.csrf import csrf_exempt
-
-
+from .models import *
+from .serializers import *
 
 
 from asgiref.sync import async_to_sync
@@ -47,10 +47,19 @@ def generate_daily_report(request):
 
 
 
+@api_view(['GET'])
+def get_project_manager(request):
+
+   queryset = ProjectManager.objects.all()
+   data = ProjectManagerSerializer(queryset,many=True).data
+   return JsonResponse({"data":data})
 
 @csrf_exempt
 @async_to_sync
 async def generate_ai_design(request):
+
+
+
     prompt = request.POST.get('prompt')
     if request.method == 'POST':
         try:
@@ -81,7 +90,7 @@ async def generate_ai_design(request):
                 request_id = first_api_response_data.get('id')
 
                 # Delay the execution for 3-4 seconds
-                await asyncio.sleep(5)
+                await asyncio.sleep(10)
 
                 # API endpoint for the second request
                 second_api_url = f'https://stablediffusionapi.com/api/v3/fetch/{request_id}'
