@@ -4,3 +4,4 @@ from .models import *
 admin.site.register(AIDesign)
 admin.site.register(ProjectManager)
 admin.site.register(Rating)
+admin.site.register(Vendor)
