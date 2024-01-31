@@ -80,7 +80,7 @@ async def generate_ai_design(request):
             "guidance_scale": 7
         }
 
-        # Make the first API request
+       
         first_api_response = requests.post(first_api_url, json=first_api_data)
 
         # Check if the request was successful (status code 200)
