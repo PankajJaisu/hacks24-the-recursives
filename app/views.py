@@ -163,7 +163,7 @@ def generate_ai_design(request):
         saved_image_path = fs.url(saved_image)
         print(saved_image_path)
         first_api_data = {
-            "key": "xIkNooh1c70ymmqD3LLJE3k82KBSNfph0RgMd1jScHrNAweJU9w5Kj7d7ezD",
+            "key": "YHXE5EfZ2Mp7zbCwqqQTvw7ffwHlGLBwXtNZrS4IXCMRqQMQhaa6mJqrqQ1G",
             "init_image": "https://7c5f-203-212-25-243.ngrok-free.app/media/images"+saved_image_path,
             "prompt": prompt,
             "steps": 50,
@@ -220,6 +220,7 @@ def generate_ai_design(request):
 @api_view(['POST'])
 def upload_progress(request):
     image = request.FILES['image']
+    print("request.data:",request.data)
     daily_progress = DailyProgress.objects.create(image=image)
     url = "https://7c5f-203-212-25-243.ngrok-free.app"+daily_progress.image.url
     return JsonResponse({"image_url":url})
@@ -254,3 +255,8 @@ def get_task(request):
    return JsonResponse({"data":data})
 
 
+@api_view(['GET'])
+def get_daily_progress(request):
+    daily_progress = DailyProgress.objects.filter().last()
+    url = "https://7c5f-203-212-25-243.ngrok-free.app"+daily_progress.image.url
+    return JsonResponse({"img_url":url})

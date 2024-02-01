@@ -10,4 +10,5 @@ urlpatterns = [
     path('get-vendor-list/',views.get_vendor_list),
     path('add-task/',views.add_task),
     path('get-task-list/',views.get_task),
+    path('get-daily-progress/',views.get_daily_progress),
 ]
